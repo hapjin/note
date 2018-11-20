@@ -9,3 +9,18 @@ spark standalone cluster 支持2种作业的执行模式，client mode 和 clust
 https://github.com/hapjin/note.git
 
 参考spark示例中出现的bug分析。
+
+注意 deploy mode 和 execution mdoe 的区别
+
+spark 作业的执行模型：
+
+- client mode
+
+- cluster mode
+
+- lcoal mode
+
+  ​
+
+spark deploy mode涉及到节点的角色：master节点（ResourceManger/NodeManager)
+
