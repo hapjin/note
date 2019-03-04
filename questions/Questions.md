@@ -143,9 +143,13 @@
 6. Elasticsearch写操作
 
    - docId 是如何自动生成的？
-   - xxx
+   - doc--->in memroy buffer--->refresh segment--->commit disk。写操作首先将文档保存到内存，默认1s refresh 成为segment，segment是可被搜索的，然后是默认30min flush到磁盘。
 
 7. ElasticSearch 获取文档原理（GET操作）
+
+   GET 操作的会引发refresh吗？GET操作的一致性，Index了一篇文档，什么时候能被GET到？(测试一下，把refresh 设置得大一些，看看GET能否GET到？)
+
+   写blog记录理解org.apache.lucene.util.SetOnce，如何实现只允许一次修改，多次读取的场景？
 
 8. ElasticSearch查询原理（Search操作）
 
