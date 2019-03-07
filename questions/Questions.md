@@ -265,6 +265,8 @@
 
    在源码中：num_primary_shards其实是 routingNumShards（参数路由的分片数量）“并不是”定义索引时指定的分片数量。这是为了支持shrink操作。
 
+   哈希计算出分片后，查找RoutingTable得到该分片所在的节点地址，然后将文档发送到该节点上。
+
    ​
 
 6. Elasticsearch写操作
