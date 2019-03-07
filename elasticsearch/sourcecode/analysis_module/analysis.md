@@ -75,16 +75,9 @@ AnalysisModule analysisModule = new AnalysisModule(this.environment, pluginsServ
 
 ```java
         NamedRegistry<AnalysisProvider<CharFilterFactory>> charFilters = setupCharFilters(plugins);
-
         NamedRegistry<AnalysisProvider<TokenFilterFactory>> tokenFilters = setupTokenFilters(plugins, hunspellService);
-
-
         NamedRegistry<AnalysisProvider<TokenizerFactory>> tokenizers = setupTokenizers(plugins);
-
-
         NamedRegistry<AnalysisProvider<AnalyzerProvider<?>>> analyzers = setupAnalyzers(plugins);
-
-
         NamedRegistry<AnalysisProvider<AnalyzerProvider<?>>> normalizers = setupNormalizers(plugins);
 ```
 
@@ -106,6 +99,14 @@ AnalysisModule analysisModule = new AnalysisModule(this.environment, pluginsServ
         standardAnalyzer.setVersion(version);
     }
 ```
+
+
+
+引用一段《》中关于 token、type、term、dictionary概念的解释：(这里的type和ElasticSearch索引中的type是不一样的，ElasticSearch索引中的type以后版本将不支持了)
+
+>A token is an instance of a sequence of characters in some particular document that are grouped together as a useful semantic unit for processing. A type is the class of all tokens containing the same character sequence. A term is a (perhaps normalized) type that is included in the IR system's dictionary.
+>
+>For example, if the document to be indexed is to `sleep perchance to dream`, then there are 5 tokens, but only 4 types (since there are 2 instances of to). However, if to is omitted from the index (as a stop word) then there will be only 3 terms: sleep, perchance, and dream.
 
 
 

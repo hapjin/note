@@ -1,6 +1,43 @@
 ## Questions
 
+### JAVA
 
+1. xxx
+
+2. ThreadLocal 原理
+
+   ThreadLocal用来解决线程之间的数据隔离，又能方便在本线程之中数据共享（也可通过扩展Runnable接口定义实例变量来实现本线程中的数据共享访问---线程的实例变量，当Runnable类中的各个方法当然能够访问了）。每个线程实例有一个ThreadLocalMap属性，它是一个HashMap，Key是持有ThreadLocal对象的WeakReference引用，Value是线程想要保存的数据。
+
+   线程通过ThreadLocal get方法获取数据时，首先Thread.currentThread()获取当前线程，进而获取线程的ThreadLocalMap实例，然后以threadLocal对象(this参数)作为key，查找ThreadLocalMap获取该线程保存的数据。
+
+   ThreadLocal存在内存泄漏：由于ThreadLocal对象是ThreadLocalMap的Entry的key，而数据是Entry的value。key是`WeakReference<ThreadLocal>`由弱引用持有，当ThreadLocal对象释放后，value指向的真正数据并没有立即释放，从而导致内存泄漏。
+
+   要解决内存泄漏问题，在每次使用完ThreadLocal获取数据后，再调用remove方法（这种做法限制了业务使用场景）。
+
+   WeakReference与WeakHashMap。当没有强引用引用对象，只有弱引用引用该对象时，该对象可能会被GC掉。
+
+   ​
+
+   - 每个Thread对象都有一个ThreadLocalMap实例，key是ThreadLocal，value是数据。这样，每个线程可以使用多个的ThreadLocal对象来保存多个数据。
+
+   - ```java
+     //java.lang.ThreadLocal#get 
+     //栈帧中的局部变量表的第0个slot保存了该方法所属对象的实例引用，即：ThreadLocal对象
+     public T get() {
+             Thread t = Thread.currentThread();//获取当前线程
+             ThreadLocalMap map = getMap(t);//获取该线程的 ThreadLocalMap 实例
+             if (map != null) {
+                 ThreadLocalMap.Entry e = map.getEntry(this);//ThreadLocal对象作为key查找
+                 T result = (T)e.value;//获得 数据
+     ```
+
+   - ![threadlocal](F:\note\github\note\questions\threadlocal.png)
+
+   - ​
+
+3. 自增原子性：volatile，i++，AtomicLong，LongAddr。在多线程竞争环境下，LongAddr 比 AtomicLong 更有效率。
+
+4. xxx
 
 ### JVM 和 GC
 
@@ -106,6 +143,14 @@
 
    先按查找操作找到待插入的位置，更新链表节点指针插入节点。再以随机概率决定新加入节点的是否晋升到上一层链表（看论文细节）
 
+6. skip list 的间隔 和层数如何确定？
+
+   ​
+
+7. xxx
+
+   ​
+
 
 
 ### Elasticsearch
@@ -114,13 +159,95 @@
 
 1. Elasticsearch 数据副本模型
 
+   primary shard 和 replica
+
+   - 如何确定哪个分片是primary，哪些是replica？
+   - in-sync 副本集合
+   - global checkpoint
+   - local checkpoint
+   - xxx
+
+   ​
+
 2. Elasticsearch master节点选举
 
-3. Elasticsearch 索引(index)创建原理
+   - master选举什么时候发起？
+
+     比如当一个新节点(node.master设置为true)加入ES集群时，它会通过ZenDiscovery模块ping其他节点询问当前master，当发现超过minimum_master_nodes个节点响应都没有连接到master时，发起master选举。
+
+     总之，当一个节点发现包括自己在内的多数派的master-eligible节点认为集群没有master时，就可以发起master选举。
+
+   - 选举哪个节点作为master?
+
+     在选举过程中有两个集合，一个是active masters，另一个是Master Candidates。如果Active masters不为空则从里面选择一个节点，比较节点的ID，节点ID最小的作为选出来的master。如果active masters为空，则从master Candidates里面选择节点，按cluster state最新、节点ID最小的节点作为选出来的master。
+
+     选出来的master获得多数派的master-eligible投票后，成为真正的master。
+
+     active masters是那些被认为是当前集群中的master的节点（节点5认为节点1是master，节点4认为节点2是master，那么节点1和节点2都将作为activate master）。而master candidates是配置文中node.master设置为true的节点。
+
+   - 如何避免split brain?
+
+     选择出来的master由所有的master eligible node (node.master=true)投票，只有获得大多数投票的节点，最终才能成为真正的master。每个节点只能投一票，通过选举周期来区分同一节点不同阶段的投票（有待ES源码验证）。
+
+   - ES master节点选举会考虑两个因素：节点ID和集群状态(cluster state)，节点ID是在集群启动时随机生成的并且会持久化，ES倾向于将节点ID最小的那个节点选为master，这与[Bully算法](http://www.cs.colostate.edu/~cs551/CourseNotes/Synchronization/BullyExample.html)很相似。而最新的cluster state version保证选出的master能够知道最新数据的分布(比如哪个shard拥有最新写入的文档)
+
+   ​
+
+3. Elasticsearch 索引(index)机制
+
+   - translog机制
+
+     每次文档的更新/写入/删除等操作都提交给Lucene生效代价很大（Lucene commit），势必影响吞吐量。
+
+     >Changes to Lucene are only persisted to disk during a Lucene commit, which is a relatively expensive operation and so cannot be performed after every index or delete operation. 
+
+     Internal Lucene index处理完Index/delete/update操作之后 **写Translog 之后才给Client acknowledged确认**。但并不会立即执行Lucene commit
+
+     >All index and delete operations are written to the translog after being processed by the internal Lucene index but before they are acknowledged. 
+
+     因此，故障之后Shard恢复时，可以从Translog恢复。
+
+     >In the event of a crash, recent transactions that have been acknowledged but not yet included in the last Lucene commit can instead be recovered from the translog when the shard recovers
+
+   - translog 配置参数
+
+     `index.translog.sync_interval` tranlog 异步刷新到磁盘，这是**translog的提交**。不管有没有写操作，默认每5s写磁盘一次。
+
+     `index.translog.durability` 默认配置为request，即：在有写操作(index、delete、update)时，每次操作之后translog都要刷新到磁盘。
+
+     结合上面2个配置参数：在没有请求时，translog每5s秒刷新到磁盘，在有操作时，则是每次操作都刷新到磁盘。
+
+     `index.translog.flush_threshold_size` 为了防止translog刷新到磁盘之后translog过大，当translog到达512MB时，触发Lucene commit，同时清空该translog
+
+     >Once the maximum size has been reached a flush will happen, generating a new Lucene commit point. Defaults to `512mb`.
+
+     ​
+
+   - xxx
+
+   - xxx
 
 4. Elasticsearch分片分配原理
 
-   分片如何分配在各个节点上？分配决策由主节点完成。主要有2个问题：哪些分片分配给哪些节点？哪个分片作为主分片，哪些作为副本？
+   分片分配主要有2个过程：找出待分配的最佳节点，决定是否将分片分配到该节点上，分配决策由主节点完成。主要有2个问题：
+
+   - 哪些分片分配给哪些节点？
+
+     AllocationService.reroute()
+
+     SameShardAllocationDecider
+
+     ​
+
+   - 哪个分片作为主分片，哪些作为副本？
+
+     同步副本集合in-sync list
+
+     PrimaryShardAllocator
+
+     ReplicaShardAllocator
+
+   - xxx
 
    ​
 
@@ -143,15 +270,30 @@
 6. Elasticsearch写操作
 
    - docId 是如何自动生成的？
-   - doc--->in memroy buffer--->refresh segment--->commit disk。写操作首先将文档保存到内存，默认1s refresh 成为segment，segment是可被搜索的，然后是默认30min flush到磁盘。
-
-7. ElasticSearch 获取文档原理（GET操作）
-
-   GET 操作的会引发refresh吗？GET操作的一致性，Index了一篇文档，什么时候能被GET到？(测试一下，把refresh 设置得大一些，看看GET能否GET到？)
+   - doc--->in memroy buffer--->refresh segment--->commit disk。写操作首先将文档保存到内存，默认1s refresh 成为segment，segment是可被搜索的，然后是默认30min flush到磁盘（Lucene commit）。refresh API是将in memory buffer 刷新成Segment，flush API 则是将各个内存中的小段合并成大段，进行Lucene提交。同时，translog过大，也会导致Lucene提交。
+   - ​
 
    写blog记录理解org.apache.lucene.util.SetOnce，如何实现只允许一次修改，多次读取的场景？
 
-8. ElasticSearch查询原理（Search操作）
+7. ElasticSearch查询原理（Search操作）
+
+8. ElasticSearch GET操作
+
+   GET 根据docId获取文档。先将docId转换成分片id，然后发送到相应的节点上获取文档。
+
+   GET 操作默认是实时的(realtime=true)
+
+   >Realtime GET support allows to get a document once indexed regardless of the "refresh rate" of the index. It is enabled by default.
+
+   并可以指定refresh参数(默认为false)。也即：当成功index一篇文档后，GET能获取该文档，但search却不一定能搜索到。Search的**可见性**依赖于refresh。
+
+   >When a document is indexed, its indexed, its not "soon to be indexed". When it becomes visible for search is the question (and thats the async refresh). Fetch by Id will work even if it has not been refreshed yet.
+
+   ​
+
+9. xxx
+
+10. ​
 
 
 
@@ -194,6 +336,16 @@
 [SkipList的那点事儿](https://sylvanassun.github.io/2017/12/31/2017-12-31-skip_list/)实现参考
 
 《skiplist a probabilistic alternative to balanced trees》
+
+[Realtime GET #1060](https://github.com/elastic/elasticsearch/issues/1060)
+
+[elasticsearch-realtime-get-support](https://stackoverflow.com/questions/38795834/elasticsearch-realtime-get-support)
+
+[ElasticSearch master 选举](https://zhuanlan.zhihu.com/p/34830403)
+
+[Bully Election Algorithm Example](http://www.cs.colostate.edu/~cs551/CourseNotes/Synchronization/BullyExample.html)
+
+[深入理解ThreadLocal](https://www.cnblogs.com/noteless/p/10373044.html#10)
 
 
 
