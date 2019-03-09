@@ -99,11 +99,13 @@
 
 2. 一个默认参数：murmur3_128 哈希策略
 
-3. 计算Array数组位数（底层是个long类型数组而不是BitSet）：n是数据量、p是误报率。
+3. 已知待写入的数据量n，和期望的误报概率p，**如何确定bloom filter的长度？**
+
+   Guava计算Array数组位数（底层是个long类型数组而不是BitSet）：n是数据量、p是误报率。
 
    $$m=\frac{-n*log(p)}{log2*log2}$$
 
-   底层数组长度m  远大于 数据量n
+   底层数组长度m  远大于 数据量n。
 
 4. 计算哈希函数的个数：n是数据量，m是上一步计算出来的位数
 
@@ -113,11 +115,41 @@
 
    k个位。对每个哈希函数，$index=hash_i(e)，0 \leq index\leq m-1$，将对应位置为1：Array[index]=1
 
-   ​
+6. 什么样的哈希函数适合作为bloom filter的hash函数？
 
-   ​
+   独立同分布、尽可能地快（不要选用加密类型的hash函数，比如SHA1）
 
-6. xxx
+7. **bloom filter的长度如何确定？哈希函数的个数如何确定？**
+
+   n待写入的数据量，p是误报率(false negative)，m是bloom filter的长度，k是哈希函数的个数，公式：
+
+   $$p=(1-e^\frac{-kn}{m})^k$$
+
+   根据待写入的数据量n和误报率p，二者来调整m和k。**那么到底如何选择bloom filter的长度？**
+
+   第一步：确定待写入的数据量n
+
+   第二步：大概选择bloom filter的长度m
+
+   第三步：根据公式$\frac{m}{n}*ln2$地计算最优的哈希函数个数k
+
+   第四步：根据公式$p=(1-e^\frac{-kn}{m})^k$计算误报率，如果这个误报率可接受，则结束，否则回到第二步重新计算。
+
+   在Google Guava中，只需要指定待写入的数据量n和误报率p，哈希函数个数和bloom filter长度会自动计算出来。
+
+8. **哈希函数的个数对bloom filter的影响是什么？**
+
+   哈希函数的个数越多，bloom filter越慢，因为要执行多次哈希映射。但是，哈希函数越少，元素被hash后标记为1的位数就越少，也即越容易冲突，从而误报率会上升。
+
+   在给定bloom filter的长度m 和 待写入的数据量n 时，哈希函数的个数k的最优值是$\frac{m}{n}*ln2$
+
+9. **bloom filter的时空复杂度？**
+
+   时间复杂度：添加元素和测试一个元素是否在bloom filter的时间复杂度都是O(k)，k为哈希函数的个数。因为，添加元素就是将相应位设置为1，而测试元素是否存在，也是看相应位是否为1
+
+   空间复杂度：不好说，与期望的误报率p有关，误报率越小，空间复杂度越高。也与待写入的数据量有关，待写入的数据量越大，空间复杂度越高。
+
+10. xxx
 
 
 
@@ -328,6 +360,8 @@
 ### 有用的参考：
 
 [Google Guava之BloomFilter源码分析及基于Redis的重构](http://www.fullstackyang.com/bu-long-guo-lu-qi-google-guavalei-ku-yuan-ma-fen-xi-ji-ji-yu-redis-bitmapsde-zhong-gou/)
+
+[bloomfilter-tutorial](https://llimllib.github.io/bloomfilter-tutorial/)
 
 [Java GC Causes Distilled](https://dzone.com/articles/java-gc-causes-distilled)
 
