@@ -257,7 +257,9 @@
 
    - 如何确定哪个分片是primary，哪些是replica？
 
-     ​
+     从in-sync集合里面选择一个shard作为候选 primary shard，然后执行各个Allocation Decider决策分配器，当所有的决策分配器都同意后，获取一个集合，从中选择第1个shard作为primary shard。org.elasticsearch.gateway.PrimaryShardAllocator#makeAllocationDecision
+
+   - xxx
 
 2. Elasticsearch master节点选举
 
