@@ -72,8 +72,6 @@ The underlying store is marked corrupted iff failure is caused by index corrupti
 
 关于检查点，可参考这篇文章：[elasticsearch-sequence-ids-6-0](https://www.elastic.co/blog/elasticsearch-sequence-ids-6-0)
 
-
-
 ### 异常结束回调 onFailure()
 
 ```java
