@@ -112,9 +112,32 @@ failShardIfNeeded **可以**做2件事情，具体是如何执行得看failShard
        }
    ```
 
-   对于发起index操作的Client而言，该 index 操作会由primary shard 执行，也会由若干个replica执行。因此，pendingActions统计到底有多少个分片(既包括主分片也包括副本分片)执行**完成**(在某些副本分片上执行失败也算执行完成)了。
+   对于发起index操作的Client而言，该 index 操作会由primary shard 执行，也会由若干个replica执行。因此，pendingActions统计到底有多少个分片(既包括主分片也包括副本分片)执行**完成**(在某些副本分片上执行失败也算执行完成)了。正是由于不管是 onResponse() 还是 onFailure()，都会执行decPendingAndFinishIfNeeded()方法，每执行一次，意味着有一个分片返回了响应，这时`if (pendingActions.decrementAndGet() == 0)`就减1，直到减为0时，调用finish()方法，给Client返回ACK响应。
 
-   Client要么收到一个执行成功的ACK（默认情况下，只要primary shard执行成功，若存在 replica执行失败，Client也会收到一个执行成功的ACK，只不过 返回的ACK里面 _shards参数下的 failed 不为0而已），如下：
+   ```java
+       private void finish() {
+           if (finished.compareAndSet(false, true)) {
+               final ReplicationResponse.ShardInfo.Failure[] failuresArray;
+               if (shardReplicaFailures.isEmpty()) {
+                   failuresArray = ReplicationResponse.EMPTY;
+               } else {
+                   failuresArray = new ReplicationResponse.ShardInfo.Failure[shardReplicaFailures.size()];
+                   shardReplicaFailures.toArray(failuresArray);
+               }
+               primaryResult.setShardInfo(new ReplicationResponse.ShardInfo(
+                       totalShards.get(),
+                       successfulShards.get(),
+                       failuresArray
+                   )
+               );
+               resultListener.onResponse(primaryResult);
+           }
+       }
+   ```
+
+   ​
+
+   Client要么收到一个执行成功的ACK（默认情况下，只要primary shard执行成功，**若存在 replica执行失败**，Client也会收到一个执行成功的ACK，只不过 返回的**ACK里面 _shards参数下的 failed 不为0 **而已），如下：
 
    >{
    >  "_index": "user",
@@ -130,6 +153,8 @@ failShardIfNeeded **可以**做2件事情，具体是如何执行得看failShard
    >  "_seq_no": 0,
    >  "_primary_term": 1
    >}
+
+   另外，[ES6.3.2 index操作源码流程](https://www.cnblogs.com/hapjin/p/10577427.html) 的总结部分，详细解释了Client收到执行成功的ACK的原因。
 
    要么收到一个超时ACK，如下：（[这篇文章](https://www.cnblogs.com/hapjin/p/9821073.html)提到了如何产生一个超时的ACK）
 
