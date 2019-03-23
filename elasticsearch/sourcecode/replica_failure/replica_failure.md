@@ -141,7 +141,7 @@ failShardIfNeeded **可以**做2件事情，具体是如何执行得看failShard
 
 failShardIfNeeded方法一共有2个具体实现，看类图：
 
-
+![replica_proxy](F:\note\github\note\elasticsearch\sourcecode\replica_failure\replica_proxy.png)
 
 TransportReplicationAction.ReplicasProxy#failShardIfNeeded （默认实现）
 

@@ -57,7 +57,11 @@
 
    - ![threadlocal](F:\note\github\note\questions\threadlocal.png)
 
-   - ​
+   - 如何解决ThreadLocal的内存泄漏问题？
+
+     1，使用`java.lang.ThreadLocal#get`之后，及时调用`java.lang.ThreadLocal#remove`方法。这种方式限制了ThreadLocal的使用场景。
+
+     2，
 
 3. 自增原子性：volatile，i++，AtomicLong，LongAddr。在多线程竞争环境下，LongAddr 比 AtomicLong 更有效率。
 
