@@ -40,9 +40,9 @@
 
      MarkWord长度32位，在**无锁默认状态**下：存储对象HashCode(25bit)、分代年龄(4bit)、是否偏向锁(1bit)、锁标志位(2bit)。**然后在偏向锁、轻量级锁、重量级锁下，MarkWord存储的内容都是不同的。**而这些存储的内容，正是实现各种锁的基础。以重量级锁为例：
 
-     锁状态标志位为10(2bit)，其他 30bit 存储指向 **monitor 对象** 的指针。(每个JAVA对象都有一个 monitor 对象与之关联，它是由cpp的ObjectMonitor实现的)。
+     锁状态标志位为10(2bit)，其他 30bit 存储指向 **monitor 对象** 的指针。(**每个JAVA对象都有一个 monitor 对象与之关联**，它是由cpp的ObjectMonitor实现的)。
 
-   - synchronized 修饰的代码编译成字节码生成 monitorenter 和 monitorexit 2条指令。
+   - synchronized 修饰的代码块编译成字节码生成 monitorenter 和 monitorexit 2条指令，加锁。synchronized 修饰的方法在方法表结构有ACC_SYNCHRONIZED 标识(并没有monitorenter 和 monitorexit 字节码指令)，当方法调用时，JVM会隐示地获取 monitor，进行加锁。
 
    - JDK对synchronized锁进行了许多优化，衍生出了自旋锁、偏向锁、轻量级锁。
 

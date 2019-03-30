@@ -135,11 +135,13 @@ public abstract class AbstractRunnable implements Runnable {
        @Override
        protected void afterExecute(Runnable r, Throwable t) {
            super.afterExecute(r, t);
-           //任务执行过程中出现异常时重新提交任务
            if (t != null) {
-               logger.warn("restarting task...");
-               Runnable task = r;
-               execute(task);
+               //出现了异常
+               if (r instanceof AbstractRunnable && ((AbstractRunnable)r).isForceExecution()) {
+                   //TextAbstractRunnable 设置为强制执行时重新拉起任务
+                   execute(r);
+                   logger.error("AbstractRunnable task run time error:{}, restarted", t.getMessage());
+               }
            }
        }
    ```
