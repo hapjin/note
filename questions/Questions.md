@@ -28,7 +28,27 @@
 
    ​
 
-2. ThreadLocal 原理
+2. synchronized 关键字底层实现原理
+
+   - 三种应用方式
+
+     修饰实例方法，将当前对象加锁；修饰静态方法，将当前类的Class对象加锁；修饰同步代码块，显示提供加锁对象，一般为new Object()。
+
+   - JAVA对象结构：一个堆中的对象由三部分组成：对象头、实例数据（属性/状态）、对齐填充。
+
+     对象头由2部分组成：MarkWord和ClasssMetaData。ClassMetaData类元信息，JVM用来判断对象属于哪个类。
+
+     MarkWord长度32位，在**无锁默认状态**下：存储对象HashCode(25bit)、分代年龄(4bit)、是否偏向锁(1bit)、锁标志位(2bit)。**然后在偏向锁、轻量级锁、重量级锁下，MarkWord存储的内容都是不同的。**而这些存储的内容，正是实现各种锁的基础。以重量级锁为例：
+
+     锁状态标志位为10(2bit)，其他 30bit 存储指向 **monitor 对象** 的指针。(**每个JAVA对象都有一个 monitor 对象与之关联**，它是由cpp的ObjectMonitor实现的)。
+
+   - synchronized 修饰的代码块编译成字节码生成 monitorenter 和 monitorexit 2条指令，加锁。synchronized 修饰的方法在方法表结构有ACC_SYNCHRONIZED 标识(并没有monitorenter 和 monitorexit 字节码指令)，当方法调用时，JVM会隐示地获取 monitor，进行加锁。
+
+   - JDK对synchronized锁进行了许多优化，衍生出了自旋锁、偏向锁、轻量级锁。
+
+     偏向锁的markword结构中存储线程ID，线程获取锁时判断该线程ID是否为markword中存储的线程ID，如果是则直接获得锁（这就是偏向模式--偏向于一个线程）；轻量级锁实现：在线程栈空间中有一个Lock Record标记，CAS操作将该对象的markword 指向 lockrecord，置锁标志位为00，否则膨胀为重量级锁。因此，轻量级锁的获取与释放是通过CAS原子指令来完成的，没有上下文切换。而重量级锁，锁的获取与释放，需要操作系统用户态到内核态之间的切换了。
+
+3. ThreadLocal 原理
 
    ThreadLocal用来解决线程之间的数据隔离，又能方便在本线程之中数据共享（也可通过扩展Runnable接口定义实例变量来实现本线程中的数据共享访问---线程的实例变量，当Runnable类中的各个方法当然能够访问了）。每个线程实例有一个ThreadLocalMap属性，它是一个HashMap，Key是持有ThreadLocal对象的WeakReference引用，Value是线程想要保存的数据。
 
@@ -63,9 +83,9 @@
 
      2，
 
-3. 自增原子性：volatile，i++，AtomicLong，LongAddr。在多线程竞争环境下，LongAddr 比 AtomicLong 更有效率。
+4. 自增原子性：volatile，i++，AtomicLong，LongAddr。在多线程竞争环境下，LongAddr 比 AtomicLong 更有效率。
 
-4. xxx
+5. xxx
 
 ### JVM 和 GC
 
@@ -465,3 +485,5 @@
 [docs-replication官方文档](https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-replication.html)
 
 [docs-replication官方文档中文翻译](https://www.jianshu.com/p/eaca8bb2ffb6)
+
+[深入理解Java并发之synchronized实现原理](https://blog.csdn.net/javazejian/article/details/72828483#synchronized%E4%BD%9C%E7%94%A8%E4%BA%8E%E5%AE%9E%E4%BE%8B%E6%96%B9%E6%B3%95)
