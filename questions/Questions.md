@@ -405,7 +405,43 @@
 
    ​
 
-9. xxx
+9. term查询和match查询的区别
+
+   term查询不会对查询字符串分词(analyze过程是没有的)，是直接根据输入的查询字符串计算匹配得分，而match查询会有一个analyze过程。match查询经过analyze后，生成一个个的term，然后针对每个term计算匹配得分，那些匹配term越多的文档，得分会越高。其内部转化成bool should term 查询。
+
+10. ES查询：match_pharse
+
+   match_pharse是词组查询，首先对 匹配短语 进行分析，拆解成一个个的term。然后找出包含所有term的文档，再过滤掉term不在一起的文档(slope=0)，保证每个term都是有序且连续的。
+
+11. 倒排索引
+
+    倒排索引由2部分组成：词典(term dictionary)和倒排表(posting list)。词典是文档集合中出现的所有词汇组成的有序列表，词典中的每个词都有一个包含这个词的倒排表与之对应。
+
+    为了加速倒排表的查找，倒排表引入了skip pointer，跳跃指针，形成了skip list（多层有序链表，以空间换时间）。从而查找时间复杂度为O(logN)。
+
+12. 介绍一下function_score 查询？
+
+    functionn_score查询是ES里面的一种组合查询([bool、function_socre、constant_socre](https://www.elastic.co/guide/en/elasticsearch/reference/current/compound-queries.html))。当**通过基础查询返回文档后**，使用function函数对文档重新打分，从而在原来得分的基础实现一种乘法(score_mode默认为multiply)放大
+
+    functionn_score查询根据score_mode参数来指定进行何种放大操作（multiply、sum、max...）
+
+    function_socre查询提供了若干种打分函数，比如script_socre、field_value_factor、decay衰减函数。
+
+    field_value_factor 有三个参数：field、factor、modifier。field是文档的字段名称，一般是数值类型的字段，比如点赞数量。factor 是field字段的乘数因子，modifier则决定针对field字段使用一个什么样的数学函数(sqrt、log、squre)。示例如下：field 就是 字段名称 likes，factor=1.2，modifier是sqrt。
+
+    $$sqrt(1.2*doc['likes'].value)$$
+
+13. 介绍一下ES查询里面的decay function？
+
+    decay function 是function_score 查询里面一种函数类型，它与field_value_factor类似。
+
+    首先有一个基础查询，假设使用function_score作乘法放大，采用的是decay function。假设索引的文档里面有一个字段是create_time，它是一个日期：
+
+    使用decay function时，指定四个因子：origin、scale、offset、decay。在[origin-offset，origin+offset]范围内不衰减，超出该范围，超出了 scale 时，衰减为decay指定的值(比如0.5)。可选的衰减函数有：高斯分布函数、指数函数exp、线性函数linear。
+
+14. ES查询得分分析 explian 和 得分计算公式 TF-IDF vs BM25
+
+15. ​
 
 
 
