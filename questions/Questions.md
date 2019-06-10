@@ -228,7 +228,14 @@
 7. xxx
 
 
+### redis hash vs jdk8 hashmap
 
+1. 哈希函数不同，redis hash 函数采用Murmur2，jdk8 hashmap 先进行 获取key 的int 型hashCode，长度32bit，右移16bit(h>>>16)进行扰动，最后再对 length-1 取模。
+2. 添加元素不同：redis hash 采用头插法添加元素，即当一个Bin(dictEntry)下已有多个元素时(发生了冲突)，新添加的元素放入链表头部，why? redis作为数据存储刚写入的元素很有可能频繁地读取。jdk8 hashmap 采用尾插法，在插入过程中遍历linkedlist，当遍历长度大于8时，会将linkedlist转换成红黑树。因此采用尾插法，在插入过程中能够计数，在计数大于8时，就转换。
+3. redis hash采用链表解决hash碰撞、jdk8 采用链表兼红黑树方式解决冲突。
+4. redis hash采用渐进式扩容(能渐进式原因是它存储了2个hashtable)，而jdk8 hashmap触发扩容条件时，一次完成扩容。
+5. redis hash元素数量很少时，底层采用压缩列表存储。而jdk8 hashmap 没有这样的优化。
+6. jdk8 hashmap load factor 为什么是0.75？ 当load factor =0.75时，向长度为table.length的数组添加元素服从lambda=0.5的possion 分布。某个位置(bin)有3个元素(发生了2次冲突了)的概率p(k=3)=possion(lambda=0.5,k=3)
 
 ### Elasticsearch
 
@@ -522,4 +529,4 @@
 
 [docs-replication官方文档中文翻译](https://www.jianshu.com/p/eaca8bb2ffb6)
 
-[深入理解Java并发之synchronized实现原理](https://blog.csdn.net/javazejian/article/details/72828483#synchronized%E4%BD%9C%E7%94%A8%E4%BA%8E%E5%AE%9E%E4%BE%8B%E6%96%B9%E6%B3%95)
+[深入理解Java并发之synchronized实现原理](https://blog.csdn.net/javazejian/article/details/72828483#synchronized%E4%BD%9C%E7%94%A8%E4%BA%8E%E5%AE%9E%E4%BE%8B%E6%96%B9%E6%B3%95)	
