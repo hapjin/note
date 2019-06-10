@@ -264,13 +264,13 @@ private final AtomicInteger countUntilPurge = new AtomicInteger(PURGE_MULTIPLIER
 
 
 
-根据WeakHashMap的特征：
+而根据 WeakHashMap 的特征：当 key 不再使用后，WeakHashMap 相应的entry就会自动被GC掉。
 
 >  An entry in a WeakHashMap will automatically be removed when  its key is no longer in ordinary use.  More precisely, the presence of a  mapping for a given key will not prevent the key from being discarded by the
 >  garbage collector, that is, made finalizable, finalized, and then reclaimed.
 >  When a key has been discarded its entry is effectively removed from the map,  so this class behaves somewhat differently from other Map  implementations.
 
-并且由于 value 也使用WeakReference也包装`private ThreadLocal<WeakReference<T>> t = new ThreadLocal<>();`，那么在下一次GC时，就能清理掉 stale entries了。但是由于，value 也使用WeakReference来包装了，那么：就需要定义 hard reference 来显示地持有线程引用：???（深入理解一下WeakHashMap）
+由于ThreadLocal 设置的 value `private ThreadLocal<WeakReference<T>> t = new ThreadLocal<>();`，是一个WeakReference引用，那么只要线程的引用不存在了，该线程持有的所有ThreadLocal 设置的 value 也能自动清理了。
 
 ```java
   // Use a WeakHashMap so that if a Thread exits and is
